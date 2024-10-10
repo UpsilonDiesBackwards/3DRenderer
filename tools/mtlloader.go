@@ -7,10 +7,9 @@ import (
 	"strings"
 )
 
-func ParseMTL(mtlFPath string) (map[string]common.Material, error) {
-	materials := make(map[string]common.Material)
+func ParseMTL(mtlFPath string) (map[string]*common.Material, error) {
+	materials := make(map[string]*common.Material)
 
-	// Open MTL file
 	file, err := os.Open(mtlFPath)
 	if err != nil {
 		return nil, err
@@ -34,7 +33,7 @@ func ParseMTL(mtlFPath string) (map[string]common.Material, error) {
 			currentMaterial = &common.Material{
 				Name: materialName,
 			}
-			materials[materialName] = *currentMaterial
+			materials[materialName] = currentMaterial
 		case strings.HasPrefix(line, "map_Kd "):
 			if currentMaterial != nil {
 				currentMaterial.DiffuseMap = line[7:]

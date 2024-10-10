@@ -1,9 +1,12 @@
 package common
 
 type Material struct {
-	Name       string
-	TextureID  uint32
-	DiffuseMap string
+	Name         string
+	TextureID    uint32
+	DiffuseMap   string
+	NormalMap    string
+	SpecularMap  string
+	RoughnessMap string
 }
 
 type ObjectPrimitive struct {

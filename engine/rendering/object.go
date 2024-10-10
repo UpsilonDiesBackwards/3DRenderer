@@ -17,12 +17,16 @@ type RenderableObject struct {
 	TexCoords []float32
 	Indices   []uint32
 
-	Material    *common.Material
-	Texture     uint32
+	Material          map[string]*common.Material
+	AlbedoTextures    []uint32
+	NormalTextures    []uint32
+	SpecularTextures  []uint32
+	RoughnessTextures []uint32
+
 	ModelMatrix mgl32.Mat4
 }
 
-func NewRenderableObject(obj *common.ObjectPrimitive, textPath string) *RenderableObject {
+func NewRenderableObject(obj *common.ObjectPrimitive, mtlPath string) *RenderableObject {
 	var vao, vbo, ebo uint32
 	gl.GenVertexArrays(1, &vao)
 	gl.BindVertexArray(vao)
@@ -50,28 +54,84 @@ func NewRenderableObject(obj *common.ObjectPrimitive, textPath string) *Renderab
 
 	gl.BindVertexArray(0)
 
-	var texture uint32
-	var err error
-	if textPath == "" {
-		texture = tools.CreateWhiteTexture()
-		fmt.Println("Could not find texture path for object. Using white texture.")
+	var albedoTextures, normalTextures, specularTextures, roughnessTextures []uint32
+	materials, err := tools.ParseMTL(mtlPath)
+	if err != nil {
+
+		fmt.Println("Failed to parse mtl file: ", err)
 	} else {
-		texture, err = tools.LoadTexture(textPath)
-		if err != nil {
-			fmt.Println("Failed to load texture from", textPath)
-			return nil
+		fmt.Println("Parsed materials from file: ", materials)
+
+		for name, material := range materials {
+			if material.DiffuseMap != "" {
+				tex, err := tools.LoadTexture(material.DiffuseMap)
+				if err != nil {
+					fmt.Println("Failed to load texture: ", name, " : ", err)
+					tex = tools.CreateWhiteTexture()
+				}
+				albedoTextures = append(albedoTextures, tex)
+			} else {
+				tex := tools.CreateWhiteTexture()
+				albedoTextures = append(albedoTextures, tex)
+				fmt.Println("(A) No texture path for material: ", material)
+			}
+
+			if material.NormalMap != "" {
+				tex, err := tools.LoadTexture(material.NormalMap)
+				if err != nil {
+					fmt.Println("Failed to load texture: ", name, " : ", err)
+					tex = tools.CreateWhiteTexture()
+				}
+				normalTextures = append(normalTextures, tex)
+			} else {
+				tex := tools.CreateWhiteTexture()
+				normalTextures = append(normalTextures, tex)
+				fmt.Println("(N) No texture path for material: ", material)
+			}
+
+			if material.SpecularMap != "" {
+				tex, err := tools.LoadTexture(material.SpecularMap)
+				if err != nil {
+					fmt.Println("Failed to load texture: ", name, " : ", err)
+					tex = tools.CreateWhiteTexture()
+				}
+				specularTextures = append(specularTextures, tex)
+			} else {
+				tex := tools.CreateWhiteTexture()
+				specularTextures = append(specularTextures, tex)
+				fmt.Println("(S) No texture path for material: ", material)
+			}
+
+			if material.RoughnessMap != "" {
+				tex, err := tools.LoadTexture(material.RoughnessMap)
+				if err != nil {
+					fmt.Println("Failed to load texture: ", name, " : ", err)
+					tex = tools.CreateWhiteTexture()
+				}
+				roughnessTextures = append(roughnessTextures, tex)
+			} else {
+				tex := tools.CreateWhiteTexture()
+				roughnessTextures = append(roughnessTextures, tex)
+				fmt.Println("(R) No texture path for material: ", material)
+			}
+
 		}
 	}
+
 	return &RenderableObject{
-		VAO:         vao,
-		VBO:         vbo,
-		EBO:         ebo,
-		Vertices:    obj.Vertices,
-		Normals:     obj.Normals,
-		TexCoords:   obj.UVs,
-		Indices:     obj.Indices,
-		ModelMatrix: mgl32.Ident4(),
-		Texture:     texture,
+		VAO:               vao,
+		VBO:               vbo,
+		EBO:               ebo,
+		Vertices:          obj.Vertices,
+		Normals:           obj.Normals,
+		TexCoords:         obj.UVs,
+		Indices:           obj.Indices,
+		ModelMatrix:       mgl32.Ident4(),
+		Material:          materials,
+		AlbedoTextures:    albedoTextures,
+		NormalTextures:    normalTextures,
+		SpecularTextures:  specularTextures,
+		RoughnessTextures: roughnessTextures,
 	}
 }
 
@@ -80,9 +140,11 @@ func (obj *RenderableObject) Draw(shader *Shader) {
 
 	shader.SetMat4ByName("model", obj.ModelMatrix)
 
-	gl.ActiveTexture(gl.TEXTURE0)
-	gl.BindTexture(gl.TEXTURE_2D, obj.Texture)
-	shader.SetInt("texture0", 0)
+	for i, texture := range obj.AlbedoTextures {
+		gl.ActiveTexture(uint32(gl.TEXTURE0 + i))
+		gl.BindTexture(gl.TEXTURE_2D, texture)
+		shader.SetInt(fmt.Sprintf("texture%d", i), int(int32(i)))
+	}
 
 	gl.DrawElements(gl.TRIANGLES, int32(len(obj.Indices)), gl.UNSIGNED_INT, gl.PtrOffset(0))
 
@@ -112,24 +174,22 @@ func (obj *RenderableObject) SetScale(scale mgl32.Vec3) {
 
 func (obj *RenderableObject) SetColor(R, G, B, A uint8) {
 	if obj != nil {
-		obj.Texture = tools.CreateColorMaterial(R, G, B, A)
+		tex := tools.CreateColorMaterial(R, G, B, A)
+		obj.AlbedoTextures = append(obj.AlbedoTextures, tex)
 	}
 }
 
 func CombineVertices(obj *common.ObjectPrimitive) []float32 {
 	combinedVertices := make([]float32, 0, len(obj.Vertices)+len(obj.UVs)+len(obj.Normals))
 	for i := 0; i < len(obj.Vertices)/3; i++ {
-		// Add vertex position (3 floats)
 		combinedVertices = append(combinedVertices, obj.Vertices[i*3], obj.Vertices[i*3+1], obj.Vertices[i*3+2])
 
-		// Add UV coordinates (2 floats), assuming UVs are available
 		if i < len(obj.UVs)/2 {
 			combinedVertices = append(combinedVertices, obj.UVs[i*2], obj.UVs[i*2+1])
 		} else {
 			combinedVertices = append(combinedVertices, 0.0, 0.0) // Default UV
 		}
 
-		// Add normals (3 floats), assuming normals are available
 		if i < len(obj.Normals)/3 {
 			combinedVertices = append(combinedVertices, obj.Normals[i*3], obj.Normals[i*3+1], obj.Normals[i*3+2])
 		} else {
