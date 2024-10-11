@@ -63,59 +63,12 @@ func NewRenderableObject(obj *common.ObjectPrimitive, mtlPath string) *Renderabl
 		fmt.Println("Parsed materials from file: ", materials)
 
 		for name, material := range materials {
-			if material.DiffuseMap != "" {
-				tex, err := tools.LoadTexture(material.DiffuseMap)
-				if err != nil {
-					fmt.Println("Failed to load texture: ", name, " : ", err)
-					tex = tools.CreateWhiteTexture()
-				}
-				albedoTextures = append(albedoTextures, tex)
-			} else {
-				tex := tools.CreateWhiteTexture()
-				albedoTextures = append(albedoTextures, tex)
-				fmt.Println("(A) No texture path for material: ", material)
-			}
-
-			if material.NormalMap != "" {
-				tex, err := tools.LoadTexture(material.NormalMap)
-				if err != nil {
-					fmt.Println("Failed to load texture: ", name, " : ", err)
-					tex = tools.CreateWhiteTexture()
-				}
-				normalTextures = append(normalTextures, tex)
-			} else {
-				tex := tools.CreateWhiteTexture()
-				normalTextures = append(normalTextures, tex)
-				fmt.Println("(N) No texture path for material: ", material)
-			}
-
-			if material.SpecularMap != "" {
-				tex, err := tools.LoadTexture(material.SpecularMap)
-				if err != nil {
-					fmt.Println("Failed to load texture: ", name, " : ", err)
-					tex = tools.CreateWhiteTexture()
-				}
-				specularTextures = append(specularTextures, tex)
-			} else {
-				tex := tools.CreateWhiteTexture()
-				specularTextures = append(specularTextures, tex)
-				fmt.Println("(S) No texture path for material: ", material)
-			}
-
-			if material.RoughnessMap != "" {
-				tex, err := tools.LoadTexture(material.RoughnessMap)
-				if err != nil {
-					fmt.Println("Failed to load texture: ", name, " : ", err)
-					tex = tools.CreateWhiteTexture()
-				}
-				roughnessTextures = append(roughnessTextures, tex)
-			} else {
-				tex := tools.CreateWhiteTexture()
-				roughnessTextures = append(roughnessTextures, tex)
-				fmt.Println("(R) No texture path for material: ", material)
-			}
-
+			albedoTextures = append(albedoTextures, loadTextureWithFallback(material.DiffuseMap, "(A)", name))
+			normalTextures = append(normalTextures, loadTextureWithFallback(material.NormalMap, "(N)", name))
+			specularTextures = append(specularTextures, loadTextureWithFallback(material.SpecularMap, "(S)", name))
+			roughnessTextures = append(roughnessTextures, loadTextureWithFallback(material.RoughnessMap, "(R)", name))
 		}
+
 	}
 
 	return &RenderableObject{
@@ -197,4 +150,18 @@ func CombineVertices(obj *common.ObjectPrimitive) []float32 {
 		}
 	}
 	return combinedVertices
+}
+
+func loadTextureWithFallback(texturePath string, textureType string, name string) uint32 {
+	if texturePath != "" {
+		tex, err := tools.LoadTexture(texturePath)
+		if err != nil {
+			fmt.Println("Failed to load texture for", textureType, "in material", name, ": ", err)
+			return tools.CreatePinkTexture()
+		}
+		return tex
+	} else {
+		fmt.Println("No texture path for", textureType, "in material", name)
+		return tools.CreatePinkTexture()
+	}
 }

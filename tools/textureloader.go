@@ -76,6 +76,20 @@ func CreateBlackTexture() uint32 {
 	return texture
 }
 
+func CreatePinkTexture() uint32 {
+	var whitePixel = []uint8{255, 19, 240, 255}
+	var texture uint32
+
+	gl.GenTextures(1, &texture)
+	gl.BindTexture(gl.TEXTURE_2D, texture)
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, gl.Ptr(whitePixel))
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+	gl.BindTexture(gl.TEXTURE_2D, 0)
+
+	return texture
+}
+
 func CreateColorMaterial(R, G, B, A uint8) uint32 {
 	var whitePixel = []uint8{R, G, B, A}
 	var texture uint32
