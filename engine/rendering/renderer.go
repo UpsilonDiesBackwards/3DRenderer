@@ -7,6 +7,7 @@ import (
 	"github.com/go-gl/glfw/v3.2/glfw"
 	"github.com/go-gl/mathgl/mgl32"
 	"github.com/go-gl/mathgl/mgl64"
+	"strings"
 	"time"
 )
 
@@ -61,6 +62,10 @@ func NewRenderer(window *Window) *Renderer {
 }
 
 func (r *Renderer) NewObject(filePath, mtlPath, name string) {
+	if mtlPath == "" {
+		mtlPath = strings.Replace(filePath, ".obj", ".mtl", 1)
+	}
+
 	model := tools.CreateNewOBJ(filePath, mtlPath)
 
 	renderableObject := NewRenderableObject(model, mtlPath)

@@ -23,8 +23,7 @@ func main() {
 
 	rend := rendering.NewRenderer(window)
 
-	rend.NewObject("res/models/2b.obj",
-		"res/models/2b.mtl", "char")
+	rend.NewObject("res/models/2b.obj", "", "char")
 
 	rend.GetObject("char").SetPosition(mgl32.Vec3{0, -1, -4})
 	rend.GetObject("char").SetScale(mgl32.Vec3{1, 1, 1})
